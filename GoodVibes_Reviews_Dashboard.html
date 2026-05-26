@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Good Vibes — Reviews Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0f14;--surface:#141820;--surface2:#1a1f2b;--surface3:#222838;
+  --border:#2a3040;--text:#e8eaf0;--text-dim:#8890a4;--text-muted:#5a6178;
+  --accent:#22d68a;--accent-dim:#1aad6f;--accent-glow:rgba(34,214,138,0.12);
+  --warn:#f59e42;--danger:#ef4444;--blue:#5b8def;--purple:#a78bfa;--pink:#f472b6;
+  --radius:10px;--radius-lg:16px;--shadow:0 2px 12px rgba(0,0,0,0.35);
+}
+html{font-size:15px;scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+
+.setup-banner{background:linear-gradient(135deg,rgba(91,141,239,.12),rgba(167,139,250,.08));border:1px solid rgba(91,141,239,.25);border-radius:var(--radius-lg);margin:20px 40px;padding:24px 28px}
+.setup-banner h2{font-size:1rem;font-weight:700;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.setup-banner ol{margin:0;padding-left:20px;font-size:.82rem;color:var(--text-dim);line-height:1.8}
+.setup-banner code{background:var(--surface3);padding:2px 6px;border-radius:3px;font-size:.78rem;color:var(--accent)}
+.setup-banner .url-input-wrap{margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.setup-banner input{flex:1;min-width:280px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:9px 14px;font-size:.82rem;font-family:inherit;outline:none}
+.setup-banner input:focus{border-color:var(--accent)}
+.setup-banner button{background:var(--accent);border:none;border-radius:6px;color:var(--bg);padding:9px 20px;font-size:.82rem;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity .2s;white-space:nowrap}
+.setup-banner button:hover{opacity:.85}
+.setup-banner.connected{display:none}
+
+.header{padding:28px 40px 20px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#111520 0%,var(--bg) 100%)}
+.header h1{font-family:'Playfair Display',serif;font-weight:800;font-size:1.75rem;letter-spacing:-.02em;background:linear-gradient(135deg,var(--accent),#6ee7b7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-right{display:flex;align-items:center;gap:16px}
+.header-right .status{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--text-dim)}
+.header-right .status .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);animation:pulse 2s infinite}
+.header-right .status .dot.error{background:var(--danger);box-shadow:0 0 6px var(--danger)}
+.header-right .status .dot.waiting{background:var(--warn);box-shadow:0 0 6px var(--warn);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.header-right .badge{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:.72rem;color:var(--text-muted)}
+.header-right .btn-settings{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);padding:4px 10px;font-size:.72rem;cursor:pointer;font-family:inherit;transition:all .2s}
+.header-right .btn-settings:hover{border-color:var(--accent);color:var(--accent)}
+.error-banner{background:rgba(239,68,68,.1);border-bottom:1px solid rgba(239,68,68,.2);color:#fca5a5;padding:10px 40px;font-size:.82rem;display:none;align-items:center;gap:8px}
+.error-banner.show{display:flex}
+
+/* Refresh banner */
+.refresh-banner{
+  display:none;align-items:center;justify-content:center;gap:12px;
+  padding:10px 40px;background:rgba(91,141,239,.1);border-bottom:1px solid rgba(91,141,239,.2);
+}
+.refresh-banner.show{display:flex}
+.refresh-banner span{font-size:.82rem;color:var(--blue)}
+.refresh-banner button{background:var(--accent);border:none;border-radius:5px;color:var(--bg);padding:5px 14px;font-size:.78rem;font-weight:600;font-family:inherit;cursor:pointer}
+.refresh-banner .btn-dismiss{background:transparent;border:1px solid var(--border);color:var(--text-dim)}
+
+.filters{padding:18px 40px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;border-bottom:1px solid var(--border);background:var(--surface)}
+.filter-group{display:flex;flex-direction:column;gap:4px}
+.filter-group label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);font-weight:600}
+.filter-group select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 12px;font-size:.82rem;font-family:inherit;outline:none;transition:border .2s;min-width:140px}
+.filter-group select:focus{border-color:var(--accent)}
+.filter-group select option{background:var(--surface2);color:var(--text)}
+
+.multi-select{position:relative;min-width:220px}
+.multi-select .ms-trigger{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 12px;font-size:.82rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:35px;transition:border .2s}
+.multi-select .ms-trigger:hover{border-color:var(--accent)}
+.multi-select .ms-trigger .arrow{font-size:.6rem;color:var(--text-muted);transition:transform .2s}
+.multi-select.open .ms-trigger .arrow{transform:rotate(180deg)}
+.ms-chips{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.ms-chip{background:var(--accent-glow);border:1px solid var(--accent-dim);border-radius:4px;padding:1px 7px;font-size:.72rem;color:var(--accent);display:flex;align-items:center;gap:4px}
+.ms-chip .x{cursor:pointer;font-weight:700;opacity:.7}.ms-chip .x:hover{opacity:1}
+.ms-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:8px;z-index:50;display:none;max-height:220px;overflow-y:auto;box-shadow:var(--shadow)}
+.multi-select.open .ms-dropdown{display:block}
+.ms-option{padding:8px 14px;font-size:.82rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s}
+.ms-option:hover{background:var(--surface3)}
+.ms-option.selected{color:var(--accent)}
+.ms-option .check{width:16px;height:16px;border:1.5px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0}
+.ms-option.selected .check{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+
+.btn-reset{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);padding:7px 16px;font-size:.78rem;font-family:inherit;cursor:pointer;transition:all .2s;align-self:flex-end}
+.btn-reset:hover{border-color:var(--accent);color:var(--accent)}
+
+.kpi-row{padding:24px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);opacity:.5}
+.kpi .kpi-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:4px}
+.kpi .kpi-value{font-size:1.65rem;font-weight:700;letter-spacing:-.02em}
+.kpi .kpi-sub{font-size:.72rem;color:var(--text-dim);margin-top:2px}
+.kpi.accent .kpi-value{color:var(--accent)}.kpi.warn .kpi-value{color:var(--warn)}.kpi.blue .kpi-value{color:var(--blue)}.kpi.purple .kpi-value{color:var(--purple)}.kpi.pink .kpi-value{color:var(--pink)}
+
+.charts-grid{padding:0 40px 24px;display:grid;grid-template-columns:2fr 1fr;gap:16px}
+@media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px}
+.chart-card h3{font-size:.82rem;font-weight:600;margin-bottom:14px;color:var(--text-dim)}
+
+/* Ratings table */
+.ratings-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.ratings-table thead th{text-align:center;padding:8px 10px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);border-bottom:1px solid var(--border)}
+.ratings-table thead th:first-child{text-align:left}
+.ratings-table tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+.ratings-table tbody tr:hover{background:var(--surface2)}
+.ratings-table tbody td{padding:8px 10px;text-align:center;font-size:.82rem;color:var(--text-dim)}
+.ratings-table tbody td:first-child{text-align:left;color:var(--text);font-weight:500}
+.ratings-table tbody td.has-val{font-weight:600}
+.ratings-table .star-5{color:var(--accent)}.ratings-table .star-4{color:var(--blue)}.ratings-table .star-3{color:var(--warn)}.ratings-table .star-2{color:var(--pink)}.ratings-table .star-1{color:var(--danger)}
+.ratings-table .store-code{font-size:.7rem;color:var(--text-muted);font-weight:400}
+
+.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:16px}
+.donut-svg{width:180px;height:180px}
+.donut-legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--text-dim)}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+.cat-section{padding:0 40px 24px}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+
+/* Category breakdown tables */
+.cat-breakdown{padding:0 40px 24px}
+.cat-breakdown-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.cat-breakdown-grid{grid-template-columns:1fr}}
+.cat-breakdown-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 22px;max-height:340px;overflow-y:auto}
+.cat-breakdown-card h4{font-size:.78rem;font-weight:600;color:var(--text-dim);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.cat-breakdown-card h4 .cb-icon{font-size:1rem}
+.cb-table{width:100%;border-collapse:collapse}
+.cb-table tr{border-bottom:1px solid var(--border);transition:background .15s}
+.cb-table tr:last-child{border-bottom:none}
+.cb-table tr:hover{background:var(--surface2)}
+.cb-table td{padding:6px 8px;font-size:.78rem}
+.cb-table td:first-child{color:var(--text-dim)}
+.cb-table td:last-child{text-align:right;font-weight:600;color:var(--text);width:50px}
+.cb-table .cb-bar{height:4px;border-radius:2px;margin-top:3px;transition:width .4s ease}
+.cb-empty{font-size:.78rem;color:var(--text-muted);font-style:italic;padding:12px 0}
+.cat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;display:flex;align-items:center;gap:14px}
+.cat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.cat-card .cat-info .cat-name{font-size:.78rem;color:var(--text-dim);margin-bottom:2px}
+.cat-card .cat-info .cat-count{font-size:1.3rem;font-weight:700}
+.cat-card .cat-info .cat-pct{font-size:.7rem;color:var(--text-muted)}
+
+.table-section{padding:0 40px 40px}
+.table-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.table-header h3{font-size:.88rem;font-weight:600}.table-header .count{font-size:.75rem;color:var(--text-muted)}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead th{text-align:left;padding:12px 14px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);cursor:pointer;user-select:none;transition:color .2s;white-space:nowrap}
+thead th:hover{color:var(--accent)}
+thead th .sort-arrow{display:inline-block;margin-left:4px;font-size:.6rem;opacity:.3;transition:opacity .2s}
+thead th.sort-active .sort-arrow{opacity:1;color:var(--accent)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}tbody tr:hover{background:var(--surface2)}
+tbody td{padding:10px 14px;vertical-align:top}
+.star{color:var(--warn)}.star.dim{color:var(--surface3)}
+.review-text{max-width:360px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--text-dim);font-size:.78rem;line-height:1.45;cursor:pointer}
+.review-text.expanded{-webkit-line-clamp:unset}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.tag-product{background:rgba(91,141,239,.15);color:var(--blue)}
+.tag-service{background:rgba(34,214,138,.12);color:var(--accent)}
+.tag-store{background:rgba(167,139,250,.15);color:var(--purple)}
+.tag-staff{background:rgba(244,114,182,.15);color:var(--pink)}
+.tag-general{background:var(--surface3);color:var(--text-muted)}
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:16px}
+.pagination button{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);padding:5px 12px;font-size:.78rem;font-family:inherit;cursor:pointer;transition:all .2s}
+.pagination button:hover{border-color:var(--accent);color:var(--accent)}
+.pagination button.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.pagination button:disabled{opacity:.3;cursor:not-allowed}
+
+.loading-overlay{position:fixed;inset:0;background:rgba(12,15,20,.85);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(4px)}
+.loading-overlay.hidden{display:none}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:768px){.header,.filters,.kpi-row,.charts-grid,.cat-section,.cat-breakdown,.table-section,.setup-banner{padding-left:16px;padding-right:16px;margin-left:0;margin-right:0}.header h1{font-size:1.3rem}.charts-grid{grid-template-columns:1fr}}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loader">
+  <div style="text-align:center"><div class="spinner"></div><p style="margin-top:14px;font-size:.82rem;color:var(--text-dim)">Loading reviews…</p></div>
+</div>
+
+<div class="header">
+  <div>
+    <h1>Good Vibes Reviews Dashboard</h1>
+    <p style="font-size:.75rem;color:var(--text-muted);margin-top:4px">Google Reviews KPI Tracker — April 2026 onward</p>
+  </div>
+  <div class="header-right">
+    <div class="status"><div class="dot" id="statusDot"></div><span id="statusText">Connecting…</span></div>
+    <div class="badge" id="lastUpdate">Last updated: —</div>
+    <button class="btn-settings" onclick="showSetup()">⚙ Setup</button>
+  </div>
+</div>
+
+<div class="setup-banner connected" id="setupBanner">
+  <h2>🔗 One-Time Setup — Connect Your Google Sheet</h2>
+  <ol>
+    <li>Go to <a href="https://script.google.com" target="_blank" style="color:var(--accent)">script.google.com</a> and click <strong>+ New project</strong></li>
+    <li>Delete the default code, paste the contents of <strong>Code.gs</strong></li>
+    <li>Click <code>Deploy → New deployment</code></li>
+    <li>Type = <strong>Web app</strong> · Execute as = <strong>Me</strong> · Access = <strong>Anyone</strong></li>
+    <li>Click <strong>Deploy</strong>, authorize when prompted, copy the <strong>Web app URL</strong></li>
+    <li>Paste it below and click Connect:</li>
+  </ol>
+  <div class="url-input-wrap">
+    <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/AKfycb.../exec" spellcheck="false">
+    <button onclick="connectApi()">Connect & Load</button>
+  </div>
+</div>
+
+<div class="error-banner" id="errorBanner">⚠️ <span id="errorMsg"></span></div>
+
+<!-- Refresh prompt banner -->
+<div class="refresh-banner" id="refreshBanner">
+  <span>📦 New data available — <strong id="refreshCount"></strong> reviews fetched.</span>
+  <button onclick="applyPendingData()">Refresh Now</button>
+  <button class="btn-dismiss" onclick="dismissRefresh()">Later</button>
+</div>
+
+<div class="filters">
+  <div class="filter-group"><label>State</label><select id="filterState"><option value="all">All States</option></select></div>
+  <div class="filter-group"><label>Store(s)</label>
+    <div class="multi-select" id="storeMultiSelect">
+      <div class="ms-trigger" onclick="toggleMS()"><div class="ms-chips" id="msChips"><span style="color:var(--text-muted);font-size:.8rem">All Stores</span></div><span class="arrow">▼</span></div>
+      <div class="ms-dropdown" id="msDropdown"></div>
+    </div>
+  </div>
+  <div class="filter-group"><label>Period View</label><select id="filterPeriod"><option value="all">All</option></select></div>
+  <div class="filter-group"><label>Category</label><select id="filterCategory"><option value="all">All Categories</option><option value="product">Product</option><option value="service">Service</option><option value="store">Store</option><option value="staff">Staff</option><option value="general">General</option></select></div>
+  <div class="filter-group"><label>Rating</label><select id="filterRating"><option value="all">All Ratings</option><option value="5">5 Stars</option><option value="4">4 Stars</option><option value="3">3 Stars</option><option value="2">2 Stars</option><option value="1">1 Star</option></select></div>
+  <button class="btn-reset" onclick="resetFilters()">Reset Filters</button>
+</div>
+
+<div class="kpi-row" id="kpiRow"></div>
+<div class="charts-grid">
+  <div class="chart-card"><h3>Reviews per Store</h3><div id="ratingsTable"></div></div>
+  <div class="chart-card"><h3>Category Breakdown</h3><div class="donut-wrap" id="donutChart"></div></div>
+</div>
+<div class="cat-section"><div class="cat-grid" id="catGrid"></div></div>
+<div class="cat-breakdown"><div class="cat-breakdown-grid" id="catBreakdown"></div></div>
+<div class="table-section">
+  <div class="table-header"><h3>Review Details</h3><div class="count" id="tableCount"></div></div>
+  <div class="table-wrap" style="max-height:520px;overflow-y:auto">
+    <table><thead><tr>
+      <th onclick="sortTable('reviewDate')">Date <span class="sort-arrow" id="sort-reviewDate">▼</span></th>
+      <th onclick="sortTable('storeName')">Store <span class="sort-arrow" id="sort-storeName">▼</span></th>
+      <th onclick="sortTable('state')">State <span class="sort-arrow" id="sort-state">▼</span></th>
+      <th onclick="sortTable('reviewer')">Reviewer <span class="sort-arrow" id="sort-reviewer">▼</span></th>
+      <th onclick="sortTable('rating')">Rating <span class="sort-arrow" id="sort-rating">▼</span></th>
+      <th onclick="sortTable('reviewText')">Comment <span class="sort-arrow" id="sort-reviewText">▼</span></th>
+      <th onclick="sortTable('category')">Category <span class="sort-arrow" id="sort-category">▼</span></th>
+    </tr></thead><tbody id="tableBody"></tbody></table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════
+const STORAGE_KEY = 'gv_dashboard_api_url';
+const REFRESH_MS = 30 * 60 * 1000; // 30 minutes
+const PAGE_SIZE = 20;
+
+let API_URL = 'https://script.google.com/macros/s/AKfycbxbkaK9HBt5eUz8XBw-wC3yk-SKLiuY_AfFEFimTNn44djvP4rc6kA21f1-LDiCiACM/exec';
+let allReviews = [];
+let filtered = [];
+let currentPage = 1;
+let selectedStores = new Set();
+let refreshTimer = null;
+let jsonpCounter = 0;
+let sortColumn = 'reviewDate';
+let sortDirection = 'desc';
+let isFirstLoad = true;
+let pendingReviews = null; // Staging area for refresh-with-prompt
+
+// ─── CATEGORY CLASSIFIER ──────────────────
+const CATEGORY_RULES = {
+  staff:[/\bstaff\b/i,/\bemployee/i,/\bcrew\b/i,/\bworker/i,/\bteam\b/i,/\bfriendly\b/i,/\bknowledgeable\b/i,/\bhelpful\b/i,/\bnice\b/i,/\bkind\b/i,/\bsweet\b/i,/\bwelcoming\b/i,/\baccommodating\b/i,/\bcourteous\b/i,/\battentive\b/i,/\bexpert/i,/\bprofessional\b/i,/\bgreeted\b/i,/\bgirls?\b/i,/\bguys?\b/i,/\b(?:ava|madison|kenny|jordan|robbie|roger|riley|freddy|nick|rylee|sean|wesley|wes|sunny|andre|camden|ryan)\b/i],
+  product:[/\bproduct/i,/\bselection/i,/\bvariety\b/i,/\bbrand/i,/\bflavor/i,/\bjuice\b/i,/\bvape\b/i,/\bglass\b/i,/\bbong/i,/\bbow[ls]/i,/\bpod/i,/\bdisposable/i,/\bpreroll/i,/\bedible/i,/\bcart/i,/\bequipment\b/i,/\bgeek.?bar\b/i,/\bpax\b/i,/\b7stax\b/i,/\bitem/i,/\bquality\b/i],
+  store:[/\bstore\b/i,/\bshop\b/i,/\blocation\b/i,/\bclean\b/i,/\borgani[zs]ed\b/i,/\batmosphere\b/i,/\bconvenient\b/i,/\bparking\b/i,/\bdecor/i,/\benvironment\b/i,/\bvibe/i,/\bplace\b/i,/\bspot\b/i],
+  service:[/\bservice\b/i,/\bdeal/i,/\bpric/i,/\breward/i,/\bloyalty\b/i,/\bdiscount\b/i,/\bsale\b/i,/\bcustomer service\b/i,/\brecommend/i,/\bspecial/i]
+};
+function categorize(text){
+  if(!text||text.trim().length===0)return 'general';
+  const scores={staff:0,product:0,store:0,service:0};
+  for(const[cat,pats]of Object.entries(CATEGORY_RULES)){for(const p of pats){if(p.test(text))scores[cat]++}}
+  const max=Math.max(...Object.values(scores));
+  if(max===0)return 'general';
+  return Object.entries(scores).sort((a,b)=>b[1]-a[1])[0][0];
+}
+
+// ═══════════════════════════════════════════
+//  SETUP & CONNECTION
+// ═══════════════════════════════════════════
+function showSetup(){document.getElementById('setupBanner').classList.remove('connected')}
+function connectApi(){
+  const input=document.getElementById('apiUrlInput');
+  const url=input.value.trim();
+  if(!url||!url.startsWith('https://script.google.com/')){alert('Please paste a valid Google Apps Script web app URL.');return}
+  API_URL=url;localStorage.setItem(STORAGE_KEY,url);
+  document.getElementById('setupBanner').classList.add('connected');
+  isFirstLoad=true;loadData();startAutoRefresh();
+}
+function startAutoRefresh(){if(refreshTimer)clearInterval(refreshTimer);refreshTimer=setInterval(loadData,REFRESH_MS)}
+
+// ═══════════════════════════════════════════
+//  DATA FETCH — JSONP
+// ═══════════════════════════════════════════
+function loadDataJsonp(){
+  return new Promise((resolve,reject)=>{
+    const cbName='_gvDashCb'+(++jsonpCounter)+'_'+Date.now();
+    const script=document.createElement('script');
+    const timeout=setTimeout(()=>{cleanup();reject(new Error('Request timed out (15s).'))},15000);
+    function cleanup(){clearTimeout(timeout);delete window[cbName];if(script.parentNode)script.parentNode.removeChild(script)}
+    window[cbName]=function(data){cleanup();resolve(data)};
+    const sep=API_URL.includes('?')?'&':'?';
+    script.src=API_URL+sep+'callback='+cbName;
+    script.onerror=function(){cleanup();reject(new Error('Network error.'))};
+    document.head.appendChild(script);
+  });
+}
+
+function processRawData(data){
+  return data.reviews.map(r=>{
+    const rd=new Date(r.reviewDate);
+    return{...r,reviewer:r.reviewerName,reviewDate:rd,category:categorize(r.reviewText)};
+  });
+}
+
+async function loadData(){
+  if(!API_URL)return;
+  if(isFirstLoad) document.getElementById('loader').classList.remove('hidden');
+  hideError();
+  try{
+    const data=await loadDataJsonp();
+    if(!data.success)throw new Error(data.error||'Script returned an error');
+
+    const newReviews=processRawData(data);
+
+    if(isFirstLoad){
+      // First load: apply immediately
+      allReviews=newReviews;
+      allReviews.sort((a,b)=>b.reviewDate-a.reviewDate);
+      populateFilters();
+      applyFilters();
+      isFirstLoad=false;
+    }else{
+      // Subsequent loads: stage data and prompt user
+      pendingReviews=newReviews;
+      document.getElementById('refreshCount').textContent=newReviews.length;
+      document.getElementById('refreshBanner').classList.add('show');
+    }
+
+    document.getElementById('lastUpdate').textContent='Updated: '+new Date().toLocaleTimeString();
+    document.getElementById('statusDot').className='dot';
+    document.getElementById('statusText').textContent='Auto-refresh 30 min';
+    document.getElementById('setupBanner').classList.add('connected');
+  }catch(err){
+    console.error('Load error:',err);
+    showError(err.message);
+    document.getElementById('statusDot').className='dot error';
+    document.getElementById('statusText').textContent='Connection error';
+  }finally{
+    document.getElementById('loader').classList.add('hidden');
+  }
+}
+
+function applyPendingData(){
+  if(!pendingReviews)return;
+  // Save current filter/sort state
+  const savedState=document.getElementById('filterState').value;
+  const savedPeriod=document.getElementById('filterPeriod').value;
+  const savedCategory=document.getElementById('filterCategory').value;
+  const savedRating=document.getElementById('filterRating').value;
+  const savedStores=new Set(selectedStores);
+  const savedSortCol=sortColumn;
+  const savedSortDir=sortDirection;
+  const savedPage=currentPage;
+
+  allReviews=pendingReviews;
+  allReviews.sort((a,b)=>b.reviewDate-a.reviewDate);
+  pendingReviews=null;
+
+  populateFilters();
+
+  // Restore filter state
+  document.getElementById('filterState').value=savedState;
+  selectedStores=savedStores;
+  updateStoreDropdownForState(); // re-filter store options by state
+  updateChips();
+  document.getElementById('filterPeriod').value=savedPeriod;
+  document.getElementById('filterCategory').value=savedCategory;
+  document.getElementById('filterRating').value=savedRating;
+  sortColumn=savedSortCol;
+  sortDirection=savedSortDir;
+  currentPage=savedPage;
+
+  applyFilters();
+  document.getElementById('refreshBanner').classList.remove('show');
+}
+
+function dismissRefresh(){
+  document.getElementById('refreshBanner').classList.remove('show');
+}
+
+function showError(msg){document.getElementById('errorMsg').textContent=msg;document.getElementById('errorBanner').classList.add('show')}
+function hideError(){document.getElementById('errorBanner').classList.remove('show')}
+
+// ═══════════════════════════════════════════
+//  FILTERS
+// ═══════════════════════════════════════════
+function populateFilters(){
+  // States
+  const states=[...new Set(allReviews.map(r=>r.state))].sort();
+  const ss=document.getElementById('filterState');const cv=ss.value;
+  ss.innerHTML='<option value="all">All States</option>';
+  states.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;ss.appendChild(o)});
+  ss.value=cv||'all';
+
+  // Stores (filtered by state)
+  updateStoreDropdownForState();
+
+  // Periods
+  const periods=new Set(),quarters=new Set();
+  allReviews.forEach(r=>{const y=r.reviewDate.getFullYear(),m=r.reviewDate.getMonth();periods.add(y+'-'+String(m+1).padStart(2,'0'));quarters.add(y+'-Q'+(Math.floor(m/3)+1))});
+  const ps=document.getElementById('filterPeriod');const cp=ps.value;
+  ps.innerHTML='<option value="all">All</option>';
+  const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  [...quarters].sort().forEach(q=>{const o=document.createElement('option');o.value=q;o.textContent=q;ps.appendChild(o)});
+  [...periods].sort().forEach(p=>{const[y,m]=p.split('-');const o=document.createElement('option');o.value=p;o.textContent=mn[parseInt(m)-1]+' '+y;ps.appendChild(o)});
+  ps.value=cp||'all';
+}
+
+function updateStoreDropdownForState(){
+  const stateFilter=document.getElementById('filterState').value;
+  const relevantReviews=stateFilter==='all'?allReviews:allReviews.filter(r=>r.state===stateFilter);
+  const stores=[...new Set(relevantReviews.map(r=>r.storeCode+'|'+r.storeName))].sort();
+  const dd=document.getElementById('msDropdown');dd.innerHTML='';
+
+  // Remove selected stores that no longer match the state
+  if(stateFilter!=='all'){
+    const validCodes=new Set(stores.map(s=>s.split('|')[0]));
+    selectedStores.forEach(code=>{if(!validCodes.has(code))selectedStores.delete(code)});
+  }
+
+  stores.forEach(s=>{
+    const[code,name]=s.split('|');const div=document.createElement('div');
+    div.className='ms-option'+(selectedStores.has(code)?' selected':'');div.dataset.code=code;
+    div.innerHTML='<span class="check">'+(selectedStores.has(code)?'✓':'')+'</span>'+name+' ('+code+')';
+    div.onclick=()=>toggleStoreOption(code);dd.appendChild(div);
+  });
+  updateChips();
+}
+
+function toggleStoreOption(code){
+  if(selectedStores.has(code))selectedStores.delete(code);else selectedStores.add(code);
+  document.querySelectorAll('#msDropdown .ms-option').forEach(el=>{if(el.dataset.code===code){el.classList.toggle('selected');el.querySelector('.check').textContent=el.classList.contains('selected')?'✓':''}});
+  updateChips();applyFilters();
+}
+function updateChips(){
+  const c=document.getElementById('msChips');
+  if(selectedStores.size===0){c.innerHTML='<span style="color:var(--text-muted);font-size:.8rem">All Stores</span>';return}
+  c.innerHTML='';selectedStores.forEach(code=>{const ch=document.createElement('span');ch.className='ms-chip';ch.innerHTML=code+' <span class="x" onclick="event.stopPropagation();toggleStoreOption(\''+code+'\')">×</span>';c.appendChild(ch)});
+}
+function toggleMS(){document.getElementById('storeMultiSelect').classList.toggle('open')}
+document.addEventListener('click',e=>{const ms=document.getElementById('storeMultiSelect');if(!ms.contains(e.target))ms.classList.remove('open')});
+
+function resetFilters(){
+  document.getElementById('filterState').value='all';document.getElementById('filterPeriod').value='all';
+  document.getElementById('filterCategory').value='all';document.getElementById('filterRating').value='all';
+  selectedStores.clear();
+  updateStoreDropdownForState();
+  applyFilters();
+}
+
+function applyFilters(){
+  const state=document.getElementById('filterState').value,period=document.getElementById('filterPeriod').value,
+    category=document.getElementById('filterCategory').value,rating=document.getElementById('filterRating').value;
+  filtered=allReviews.filter(r=>{
+    if(state!=='all'&&r.state!==state)return false;
+    if(selectedStores.size>0&&!selectedStores.has(r.storeCode))return false;
+    if(category!=='all'&&r.category!==category)return false;
+    if(rating!=='all'&&r.rating!==parseInt(rating))return false;
+    if(period!=='all'){
+      if(period.includes('Q')){const[y,q]=period.split('-Q');const rq=Math.floor(r.reviewDate.getMonth()/3)+1;if(r.reviewDate.getFullYear()!==parseInt(y)||rq!==parseInt(q))return false}
+      else{const[y,m]=period.split('-');if(r.reviewDate.getFullYear()!==parseInt(y)||(r.reviewDate.getMonth()+1)!==parseInt(m))return false}
+    }
+    return true;
+  });
+  renderKPIs();renderBarChart();renderDonut();renderCategoryCards();renderCategoryBreakdown();renderTable();
+}
+
+// State change also updates store dropdown
+document.getElementById('filterState').addEventListener('change',function(){
+  updateStoreDropdownForState();
+  applyFilters();
+});
+['filterPeriod','filterCategory','filterRating'].forEach(id=>{document.getElementById(id).addEventListener('change',applyFilters)});
+
+// ═══════════════════════════════════════════
+//  RENDERERS
+// ═══════════════════════════════════════════
+function renderKPIs(){
+  const t=filtered.length,avg=t?(filtered.reduce((s,r)=>s+r.rating,0)/t).toFixed(2):'—';
+  const five=filtered.filter(r=>r.rating===5).length,fivePct=t?((five/t)*100).toFixed(1):'0';
+  const wc=filtered.filter(r=>r.reviewText&&r.reviewText.length>0).length;
+  const resp=filtered.filter(r=>r.ownerResponse&&r.ownerResponse.length>0).length,respPct=t?((resp/t)*100).toFixed(1):'0';
+  const sc=new Set(filtered.map(r=>r.storeCode)).size;
+  document.getElementById('kpiRow').innerHTML=
+    '<div class="kpi accent"><div class="kpi-label">Total Reviews</div><div class="kpi-value">'+t+'</div><div class="kpi-sub">'+sc+' stores</div></div>'+
+    '<div class="kpi warn"><div class="kpi-label">Avg Rating</div><div class="kpi-value">'+avg+'</div><div class="kpi-sub">out of 5.00</div></div>'+
+    '<div class="kpi blue"><div class="kpi-label">5-Star Reviews</div><div class="kpi-value">'+five+'</div><div class="kpi-sub">'+fivePct+'% of total</div></div>'+
+    '<div class="kpi purple"><div class="kpi-label">With Comment</div><div class="kpi-value">'+wc+'</div><div class="kpi-sub">'+(t?((wc/t)*100).toFixed(1):0)+'% have comments</div></div>'+
+    '<div class="kpi pink"><div class="kpi-label">Responded</div><div class="kpi-value">'+resp+'</div><div class="kpi-sub">'+respPct+'% response rate</div></div>';
+}
+
+function renderBarChart(){
+  const storeRatings={};
+  filtered.forEach(r=>{
+    const k=r.storeName;
+    if(!storeRatings[k])storeRatings[k]={code:r.storeCode,5:0,4:0,3:0,2:0,1:0,total:0};
+    storeRatings[k][r.rating]=(storeRatings[k][r.rating]||0)+1;
+    storeRatings[k].total++;
+  });
+  const sorted=Object.entries(storeRatings).sort((a,b)=>b[1].total-a[1].total);
+
+  let html='<table class="ratings-table"><thead><tr><th>Store</th><th>5 Stars</th><th>4 Stars</th><th>3 Stars</th><th>2 Stars</th><th>1 Star</th></tr></thead><tbody>';
+  sorted.forEach(([name,data])=>{
+    html+='<tr><td>'+name+' <span class="store-code">('+data.code+')</span></td>';
+    [5,4,3,2,1].forEach(star=>{
+      const val=data[star];
+      if(val>0){
+        html+='<td class="has-val star-'+star+'">'+val+'</td>';
+      }else{
+        html+='<td></td>';
+      }
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('ratingsTable').innerHTML=html;
+}
+
+function renderDonut(){
+  const cats={};filtered.forEach(r=>{cats[r.category]=(cats[r.category]||0)+1});
+  const total=filtered.length||1;const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  const cm={staff:'#f472b6',product:'#5b8def',store:'#a78bfa',service:'#22d68a',general:'#5a6178'};
+  let offset=0;const R=70,C=2*Math.PI*R;
+  const segs=entries.map(([cat,count])=>{const pct=count/total,dash=C*pct,gap=C-dash;const s='<circle cx="90" cy="90" r="'+R+'" fill="none" stroke="'+(cm[cat]||'#444')+'" stroke-width="22" stroke-dasharray="'+dash+' '+gap+'" stroke-dashoffset="'+-offset+'" style="transition:all .5s"/>';offset+=dash;return s});
+  const legend=entries.map(([cat,count])=>'<span class="legend-item"><span class="legend-dot" style="background:'+(cm[cat]||'#444')+'"></span>'+cat.charAt(0).toUpperCase()+cat.slice(1)+' '+((count/total)*100).toFixed(1)+'%</span>').join('');
+  document.getElementById('donutChart').innerHTML='<svg class="donut-svg" viewBox="0 0 180 180"><circle cx="90" cy="90" r="'+R+'" fill="none" stroke="#222838" stroke-width="22"/>'+segs.join('')+'<text x="90" y="86" text-anchor="middle" fill="#e8eaf0" font-size="22" font-weight="700" font-family="DM Sans">'+total+'</text><text x="90" y="102" text-anchor="middle" fill="#5a6178" font-size="9" font-family="DM Sans">reviews</text></svg><div class="donut-legend">'+legend+'</div>';
+}
+function renderCategoryCards(){
+  const cats={staff:0,product:0,service:0,store:0,general:0};filtered.forEach(r=>{cats[r.category]=(cats[r.category]||0)+1});
+  const total=filtered.length||1;
+  const icons={staff:{i:'👤',bg:'rgba(244,114,182,.12)'},product:{i:'📦',bg:'rgba(91,141,239,.12)'},service:{i:'🤝',bg:'rgba(34,214,138,.1)'},store:{i:'🏪',bg:'rgba(167,139,250,.12)'},general:{i:'💬',bg:'#222838'}};
+  document.getElementById('catGrid').innerHTML=Object.entries(cats).map(([cat,count])=>{const pct=((count/total)*100).toFixed(1);const ic=icons[cat]||icons.general;return '<div class="cat-card"><div class="cat-icon" style="background:'+ic.bg+'">'+ic.i+'</div><div class="cat-info"><div class="cat-name">'+cat.charAt(0).toUpperCase()+cat.slice(1)+'</div><div class="cat-count">'+count+'</div><div class="cat-pct">'+pct+'% of filtered reviews</div></div></div>'}).join('');
+}
+
+// ─── CATEGORY BREAKDOWN DETAIL ────────────
+const BREAKDOWN_KEYWORDS = {
+  staff: {
+    label: 'Staff Mentions',
+    icon: '👤',
+    color: '#f472b6',
+    isStaff: true,
+    names: [
+      {name:'Ava', patterns:[/\bava\b/i]},
+      {name:'Madison', patterns:[/\bmadison\b/i]},
+      {name:'Kenny', patterns:[/\bkenny\b/i]},
+      {name:'Jordan', patterns:[/\bjordan\b/i]},
+      {name:'Robbie', patterns:[/\brobbie\b/i]},
+      {name:'Roger', patterns:[/\broger\b/i]},
+      {name:'Riley', patterns:[/\briley\b/i]},
+      {name:'Freddy', patterns:[/\bfreddy\b/i]},
+      {name:'Nick', patterns:[/\bnick\b/i]},
+      {name:'Rylee', patterns:[/\brylee\b/i]},
+      {name:'Sean', patterns:[/\bsean\b/i]},
+      {name:'Wesley', patterns:[/\bwesley\b/i,/\bwes\b/i]},
+      {name:'Sunny', patterns:[/\bsunny\b/i]},
+      {name:'Andre', patterns:[/\bandre\b/i]},
+      {name:'Camden', patterns:[/\bcamden\b/i]},
+      {name:'Ryan', patterns:[/\bryan\b/i]},
+      {name:'Mike', patterns:[/\bmike\b/i]},
+      {name:'Chris', patterns:[/\bchris\b/i]},
+      {name:'Alex', patterns:[/\balex\b/i]},
+      {name:'Sam', patterns:[/\bsam\b/i]},
+      {name:'Jake', patterns:[/\bjake\b/i]},
+      {name:'Tyler', patterns:[/\btyler\b/i]},
+      {name:'Brandon', patterns:[/\bbrandon\b/i]},
+      {name:'Ashley', patterns:[/\bashley\b/i]},
+      {name:'Jessica', patterns:[/\bjessica\b/i]},
+      {name:'Josh', patterns:[/\bjosh\b/i]},
+      {name:'Matt', patterns:[/\bmatt\b/i]},
+      {name:'Dan', patterns:[/\bdan\b/i]},
+      {name:'Dave', patterns:[/\bdave\b/i,/\bdavid\b/i]},
+      {name:'Tony', patterns:[/\btony\b/i]},
+      {name:'Joe', patterns:[/\bjoe\b/i]},
+      {name:'Derek', patterns:[/\bderek\b/i]},
+      {name:'Zach', patterns:[/\bzach\b/i]},
+      {name:'Kyle', patterns:[/\bkyle\b/i]},
+      {name:'Kayla', patterns:[/\bkayla\b/i]},
+      {name:'Sarah', patterns:[/\bsarah\b/i]},
+      {name:'Jen', patterns:[/\bjen\b/i,/\bjennifer\b/i]},
+      {name:'Emily', patterns:[/\bemily\b/i]},
+      {name:'Angel', patterns:[/\bangel\b/i]},
+      {name:'Marcus', patterns:[/\bmarcus\b/i]},
+      {name:'Travis', patterns:[/\btravis\b/i]},
+      {name:'Justin', patterns:[/\bjustin\b/i]},
+      {name:'Cody', patterns:[/\bcody\b/i]},
+      {name:'Tommy', patterns:[/\btommy\b/i]},
+      {name:'Eric', patterns:[/\beric\b/i]},
+      {name:'Brian', patterns:[/\bbrian\b/i]},
+      {name:'Liz', patterns:[/\bliz\b/i,/\belizabeth\b/i]}
+    ]
+  },
+  product: {
+    label: 'Product Mentions',
+    icon: '📦',
+    color: '#5b8def',
+    keywords: [
+      {name:'Vape', patterns:[/\bvape\b/i]},
+      {name:'Glass / Bong', patterns:[/\bglass\b/i,/\bbong\b/i]},
+      {name:'Disposable', patterns:[/\bdisposable\b/i]},
+      {name:'Flavor', patterns:[/\bflavor/i]},
+      {name:'Selection / Variety', patterns:[/\bselection\b/i,/\bvariety\b/i]},
+      {name:'Quality', patterns:[/\bquality\b/i]},
+      {name:'Brand', patterns:[/\bbrand/i]},
+      {name:'Pod', patterns:[/\bpod\b/i]},
+      {name:'Cart', patterns:[/\bcart\b/i]},
+      {name:'Juice', patterns:[/\bjuice\b/i]},
+      {name:'Preroll', patterns:[/\bpreroll/i]},
+      {name:'Edible', patterns:[/\bedible/i]},
+      {name:'Geek Bar', patterns:[/\bgeek.?bar\b/i]},
+      {name:'Pax', patterns:[/\bpax\b/i]},
+      {name:'7Stax', patterns:[/\b7stax\b/i]}
+    ]
+  },
+  service: {
+    label: 'Service Mentions',
+    icon: '🤝',
+    color: '#22d68a',
+    keywords: [
+      {name:'Customer Service', patterns:[/\bcustomer service\b/i,/\bservice\b/i]},
+      {name:'Deals / Discounts', patterns:[/\bdeal/i,/\bdiscount/i]},
+      {name:'Pricing', patterns:[/\bpric/i]},
+      {name:'Rewards / Loyalty', patterns:[/\breward/i,/\bloyalty\b/i]},
+      {name:'Recommendations', patterns:[/\brecommend/i]},
+      {name:'Sales / Specials', patterns:[/\bsale\b/i,/\bspecial/i]}
+    ]
+  }
+};
+
+function renderCategoryBreakdown(){
+  const html = ['staff','product','service'].map(cat => {
+    const cfg = BREAKDOWN_KEYWORDS[cat];
+    const reviews = filtered.filter(r => r.category === cat);
+
+    if(reviews.length === 0){
+      return '<div class="cat-breakdown-card"><h4><span class="cb-icon">'+cfg.icon+'</span>'+cfg.label+'</h4><div class="cb-empty">No '+cat+' reviews in current filter</div></div>';
+    }
+
+    const counts = [];
+
+    if(cfg.isStaff){
+      // Staff: match real names, everything else goes to General
+      let generalCount = 0;
+      const nameCounts = {};
+
+      reviews.forEach(r => {
+        const text = r.reviewText || '';
+        let matched = false;
+        cfg.names.forEach(nm => {
+          for(const p of nm.patterns){
+            if(p.test(text)){
+              nameCounts[nm.name] = (nameCounts[nm.name] || 0) + 1;
+              matched = true;
+              break;
+            }
+          }
+        });
+        if(!matched) generalCount++;
+      });
+
+      Object.entries(nameCounts).forEach(([name, count]) => {
+        counts.push({name, count});
+      });
+      counts.sort((a,b) => b.count - a.count);
+      if(generalCount > 0) counts.push({name: 'General', count: generalCount, isGeneral: true});
+    } else {
+      // Product / Service: keyword matching
+      cfg.keywords.forEach(kw => {
+        let count = 0;
+        reviews.forEach(r => {
+          const text = r.reviewText || '';
+          for(const p of kw.patterns){
+            if(p.test(text)){ count++; break; }
+          }
+        });
+        if(count > 0) counts.push({name: kw.name, count});
+      });
+      counts.sort((a,b) => b.count - a.count);
+    }
+
+    const maxCount = counts.length ? counts.reduce((m,c) => Math.max(m,c.count),0) : 1;
+
+    let tableHtml = '<div class="cat-breakdown-card"><h4><span class="cb-icon">'+cfg.icon+'</span>'+cfg.label+' <span style="font-weight:400;color:var(--text-muted);font-size:.72rem">('+reviews.length+' reviews)</span></h4>';
+
+    if(counts.length === 0){
+      tableHtml += '<div class="cb-empty">No specific mentions detected</div>';
+    } else {
+      tableHtml += '<table class="cb-table">';
+      counts.forEach(item => {
+        const barPct = (item.count / maxCount * 100).toFixed(0);
+        const nameStyle = item.isGeneral ? 'color:var(--text-muted);font-style:italic' : '';
+        tableHtml += '<tr><td><span style="'+nameStyle+'">'+item.name+'</span><div class="cb-bar" style="width:'+barPct+'%;background:'+cfg.color+'"></div></td><td>'+item.count+'</td></tr>';
+      });
+      tableHtml += '</table>';
+    }
+
+    tableHtml += '</div>';
+    return tableHtml;
+  }).join('');
+
+  document.getElementById('catBreakdown').innerHTML = html;
+}
+function sortTable(col){
+  if(sortColumn===col){sortDirection=sortDirection==='asc'?'desc':'asc'}
+  else{sortColumn=col;sortDirection=(col==='reviewDate'||col==='rating')?'desc':'asc'}
+  currentPage=1;renderTable();
+}
+function applySorting(){
+  const col=sortColumn,dir=sortDirection;
+  filtered.sort((a,b)=>{
+    let va=a[col],vb=b[col];
+    if(col==='reviewDate'){va=va.getTime();vb=vb.getTime()}
+    else if(col==='rating'){va=Number(va);vb=Number(vb)}
+    else{va=String(va||'').toLowerCase();vb=String(vb||'').toLowerCase()}
+    if(va<vb)return dir==='asc'?-1:1;
+    if(va>vb)return dir==='asc'?1:-1;
+    return 0;
+  });
+  document.querySelectorAll('thead th').forEach(th=>{th.classList.remove('sort-active')});
+  const activeArrow=document.getElementById('sort-'+col);
+  if(activeArrow){activeArrow.parentElement.classList.add('sort-active');activeArrow.textContent=dir==='asc'?'▲':'▼'}
+}
+function renderTable(){
+  applySorting();
+  const tp=Math.ceil(filtered.length/PAGE_SIZE)||1;if(currentPage>tp)currentPage=tp;
+  const start=(currentPage-1)*PAGE_SIZE;const page=filtered.slice(start,start+PAGE_SIZE);
+  document.getElementById('tableCount').textContent='Showing '+(filtered.length?start+1:0)+'–'+Math.min(start+PAGE_SIZE,filtered.length)+' of '+filtered.length;
+  document.getElementById('tableBody').innerHTML=page.map(r=>{
+    const stars=Array.from({length:5},(_,i)=>'<span class="star'+(i<r.rating?'':' dim')+'">★</span>').join('');
+    const ds=r.reviewDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const txt=r.reviewText&&r.reviewText.length>0?r.reviewText.replace(/</g,'&lt;').replace(/>/g,'&gt;'):'<span style="color:var(--text-muted);font-style:italic">No Comment</span>';
+    return '<tr><td style="white-space:nowrap">'+ds+'</td><td>'+r.storeName+'<br><span style="font-size:.7rem;color:var(--text-muted)">'+r.storeCode+'</span></td><td>'+r.state+'</td><td>'+r.reviewer+'</td><td style="white-space:nowrap">'+stars+'</td><td><div class="review-text" onclick="this.classList.toggle(\'expanded\')">'+txt+'</div></td><td><span class="tag tag-'+r.category+'">'+r.category+'</span></td></tr>';
+  }).join('');
+  const pagEl=document.getElementById('pagination');
+  if(tp<=1){pagEl.innerHTML='';return}
+  let h='<button '+(currentPage===1?'disabled':'')+' onclick="goPage('+(currentPage-1)+')">‹ Prev</button>';
+  getPageRange(currentPage,tp).forEach(p=>{if(p==='...')h+='<span style="color:var(--text-muted);padding:0 4px">…</span>';else h+='<button class="'+(p===currentPage?'active':'')+'" onclick="goPage('+p+')">'+p+'</button>'});
+  h+='<button '+(currentPage===tp?'disabled':'')+' onclick="goPage('+(currentPage+1)+')">Next ›</button>';pagEl.innerHTML=h;
+}
+function goPage(p){currentPage=p;renderTable()}
+function getPageRange(c,t){if(t<=7)return Array.from({length:t},(_,i)=>i+1);if(c<=3)return[1,2,3,4,'...',t];if(c>=t-2)return[1,'...',t-3,t-2,t-1,t];return[1,'...',c-1,c,c+1,'...',t]}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+if(API_URL){
+  document.getElementById('setupBanner').classList.add('connected');
+  document.getElementById('apiUrlInput').value=API_URL;
+  loadData();
+  startAutoRefresh();
+}
+</script>
+</body>
+</html>
