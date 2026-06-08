@@ -272,18 +272,26 @@ let pendingReviews = null; // Staging area for refresh-with-prompt
 
 // ─── CATEGORY CLASSIFIER ──────────────────
 const CATEGORY_RULES = {
-  staff:[/\bstaff\b/i,/\bemployee/i,/\bcrew\b/i,/\bworker/i,/\bteam\b/i,/\bfriendly\b/i,/\bknowledgeable\b/i,/\bhelpful\b/i,/\bnice\b/i,/\bkind\b/i,/\bsweet\b/i,/\bwelcoming\b/i,/\baccommodating\b/i,/\bcourteous\b/i,/\battentive\b/i,/\bexpert/i,/\bprofessional\b/i,/\bgreeted\b/i,/\bgirls?\b/i,/\bguys?\b/i,/\b(?:ava|madison|kenny|jordan|robbie|roger|riley|freddy|nick|rylee|sean|wesley|wes|sunny|andre|camden|ryan)\b/i],
-  product:[/\bproduct/i,/\bselection/i,/\bvariety\b/i,/\bbrand/i,/\bflavor/i,/\bjuice\b/i,/\bvape\b/i,/\bglass\b/i,/\bbong/i,/\bbow[ls]/i,/\bpod/i,/\bdisposable/i,/\bpreroll/i,/\bedible/i,/\bcart/i,/\bequipment\b/i,/\bgeek.?bar\b/i,/\bpax\b/i,/\b7stax\b/i,/\bitem/i,/\bquality\b/i],
+  staff:[/\bstaff\b/i,/\bemployee/i,/\bcrew\b/i,/\bworker/i,/\bteam\b/i,/\bfriendly\b/i,/\bknowledgeable\b/i,/\bhelpful\b/i,/\bnice\b/i,/\bkind\b/i,/\bsweet\b/i,/\bwelcoming\b/i,/\baccommodating\b/i,/\bcourteous\b/i,/\battentive\b/i,/\bexpert/i,/\bprofessional\b/i,/\bgreeted\b/i,/\bgirls?\b/i,/\bguys?\b/i,/\bpeople\b/i,/\b(?:ava|madison|kenny|jordan|robbie|roger|riley|freddy|nick|rylee|sean|wesley|wes|sunny|andre|camden|ryan|jake|dylan)\b/i],
+  product:[/\bproduct/i,/\bselection/i,/\bvariety\b/i,/\bbrand/i,/\bflavor/i,/\bjuice\b/i,/\bvape\b/i,/\bglass\b/i,/\bbong/i,/\bbow[ls]/i,/\bpod/i,/\bdisposable/i,/\bpreroll/i,/\bedible/i,/\bcart/i,/\bequipment\b/i,/\bgeek.?bar\b/i,/\bpax\b/i,/\b7stax\b/i,/\bitem/i,/\bquality\b/i,/\bhazy\s*mary\b/i,/\bpuffco\b/i,/\bmodern\s*herb\b/i],
   store:[/\bstore\b/i,/\bshop\b/i,/\blocation\b/i,/\bclean\b/i,/\borgani[zs]ed\b/i,/\batmosphere\b/i,/\bconvenient\b/i,/\bparking\b/i,/\bdecor/i,/\benvironment\b/i,/\bvibe/i,/\bplace\b/i,/\bspot\b/i],
   service:[/\bservice\b/i,/\bdeal/i,/\bpric/i,/\breward/i,/\bloyalty\b/i,/\bdiscount\b/i,/\bsale\b/i,/\bcustomer service\b/i,/\brecommend/i,/\bspecial/i]
 };
+// Tiebreak priority: when scores are equal, this order wins
+const CATEGORY_PRIORITY = {service:4, staff:3, store:2, product:1};
+
+// If a specific person name is mentioned, review is always staff
+const STAFF_NAME_OVERRIDE = /\b(?:ava|madison|kenny|jordan|robbie|roger|riley|freddy|nick|rylee|sean|wesley|wes|sunny|andre|camden|ryan|jake|dylan)\b/i;
+
 function categorize(text){
   if(!text||text.trim().length===0)return 'general';
+  // Name override: if a staff name is mentioned, it's a staff review
+  if(STAFF_NAME_OVERRIDE.test(text))return 'staff';
   const scores={staff:0,product:0,store:0,service:0};
   for(const[cat,pats]of Object.entries(CATEGORY_RULES)){for(const p of pats){if(p.test(text))scores[cat]++}}
   const max=Math.max(...Object.values(scores));
   if(max===0)return 'general';
-  return Object.entries(scores).sort((a,b)=>b[1]-a[1])[0][0];
+  return Object.entries(scores).filter(([,v])=>v===max).sort((a,b)=>CATEGORY_PRIORITY[b[0]]-CATEGORY_PRIORITY[a[0]])[0][0];
 }
 
 // ═══════════════════════════════════════════
@@ -608,6 +616,7 @@ const BREAKDOWN_KEYWORDS = {
       {name:'Tommy', patterns:[/\btommy\b/i]},
       {name:'Eric', patterns:[/\beric\b/i]},
       {name:'Brian', patterns:[/\bbrian\b/i]},
+      {name:'Dylan', patterns:[/\bdylan\b/i]},
       {name:'Liz', patterns:[/\bliz\b/i,/\belizabeth\b/i]}
     ]
   },
@@ -628,9 +637,12 @@ const BREAKDOWN_KEYWORDS = {
       {name:'Juice', patterns:[/\bjuice\b/i]},
       {name:'Preroll', patterns:[/\bpreroll/i]},
       {name:'Edible', patterns:[/\bedible/i]},
+      {name:'Hazy Mary', patterns:[/\bhazy\s*mary\b/i]},
       {name:'Geek Bar', patterns:[/\bgeek.?bar\b/i]},
       {name:'Pax', patterns:[/\bpax\b/i]},
-      {name:'7Stax', patterns:[/\b7stax\b/i]}
+      {name:'Puffco', patterns:[/\bpuffco\b/i]},
+      {name:'7Stax', patterns:[/\b7stax\b/i]},
+      {name:'Modern Herb', patterns:[/\bmodern\s*herb\b/i]}
     ]
   },
   service: {
